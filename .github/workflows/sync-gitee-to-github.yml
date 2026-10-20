@@ -1,14 +1,15 @@
 name: Sync Gitee to GitHub
 
 on:
-  schedule:
-    - cron: '*/1 * * * *'
-  workflow_dispatch:
+  # 移除了 schedule，不再定时自动运行
+  workflow_dispatch: # 保留这个，可以在网页上手动点击运行
+  repository_dispatch:
+    types: [gitee_push]
 
 jobs:
-  sync:
+  # 原来的第一个项目同步
+  sync-project-1:
     runs-on: ubuntu-latest
-
     steps:
       - name: Mirror clone from Gitee
         env:
@@ -26,6 +27,30 @@ jobs:
         env:
           TARGET_REPO_TOKEN: ${{ secrets.TARGET_REPO_TOKEN }}
           TARGET_REPO: ${{ secrets.TARGET_REPO }}
+        run: |
+          cd repo.git
+          git push --mirror "https://x-access-token:${TARGET_REPO_TOKEN}@github.com/${TARGET_REPO}.git"
+
+  # 新增的第二个项目同步 (sxaumedia-center-admin)
+  sync-project-2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror clone from Gitee
+        env:
+          GITEE_USERNAME: ${{ secrets.GITEE_USERNAME }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_REPO: ${{ secrets.GITEE_REPO_2 }} # 这里用的是 _2
+        run: |
+          if [ -n "$GITEE_TOKEN" ]; then
+            git clone --mirror "https://${GITEE_USERNAME}:${GITEE_TOKEN}@gitee.com/${GITEE_REPO}.git" repo.git
+          else
+            git clone --mirror "https://gitee.com/${GITEE_REPO}.git" repo.git
+          fi
+
+      - name: Push mirror to GitHub
+        env:
+          TARGET_REPO_TOKEN: ${{ secrets.TARGET_REPO_TOKEN }}
+          TARGET_REPO: ${{ secrets.TARGET_REPO_2 }} # 这里用的是 _2
         run: |
           cd repo.git
           git push --mirror "https://x-access-token:${TARGET_REPO_TOKEN}@github.com/${TARGET_REPO}.git"
